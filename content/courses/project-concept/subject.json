@@ -1,0 +1,7 @@
+{
+  "subject_id": "project-concept",
+  "title": "專案概念",
+  "description": "從零理解什麼是專案、為什麼需要專案管理、以及如何啟動一個專案。",
+  "tags": ["管理", "入門"],
+  "modules": ["mod_01", "mod_02"]
+}

@@ -1,0 +1,14 @@
+import { NextResponse } from "next/server";
+import { getModule } from "@/lib/data";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ subjectId: string; moduleId: string }> }
+) {
+  const { subjectId, moduleId } = await params;
+  const mod = getModule(subjectId, moduleId);
+  if (!mod) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return NextResponse.json(mod);
+}
