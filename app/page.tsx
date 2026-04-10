@@ -4,34 +4,53 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Subject } from "@/lib/types";
 import { getSubjectStats, initSubjectProgress } from "@/lib/progress";
+import { getStoredSubjects } from "@/lib/courses-store";
 
 export default function HomePage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [stats, setStats] = useState<Record<string, { completed: number; total: number }>>({});
 
   useEffect(() => {
-    // 用既有 API 取得所有 subject（透過第一個 subject 列表）
-    // MVP 先硬編 subject id，未來可加 /api/subjects 列表 API
+    // 1. 載入內建課程
     fetch("/api/subjects/project-concept")
       .then((r) => r.json())
       .then((data) => {
-        if (data.subject) {
-          setSubjects([data.subject]);
-          initSubjectProgress(data.subject.subject_id, data.subject.modules);
-          setStats({
-            [data.subject.subject_id]: getSubjectStats(
-              data.subject.subject_id,
-              data.subject.modules
-            ),
-          });
-        }
+        const builtIn = data?.subject ? [data.subject] : [];
+        // 2. 載入使用者建立的課程
+        const userSubjects = getStoredSubjects();
+        // 合併並去重
+        const allSubjects = [...builtIn];
+        userSubjects.forEach((us) => {
+          if (!allSubjects.find((s) => s.subject_id === us.subject_id)) {
+            allSubjects.push(us);
+          }
+        });
+        setSubjects(allSubjects);
+
+        // 初始化進度 & 統計
+        const newStats: Record<string, { completed: number; total: number }> = {};
+        allSubjects.forEach((s) => {
+          initSubjectProgress(s.subject_id, s.modules);
+          newStats[s.subject_id] = getSubjectStats(s.subject_id, s.modules);
+        });
+        setStats(newStats);
       });
   }, []);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-2">學習主題</h1>
-      <p className="text-gray-500 mb-6">選擇一個主題開始學習</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">學習主題</h1>
+          <p className="text-gray-500">選擇一個主題開始學習</p>
+        </div>
+        <Link
+          href="/admin/create"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+        >
+          + 建立課程
+        </Link>
+      </div>
 
       <div className="space-y-4">
         {subjects.map((subject) => {
@@ -54,7 +73,6 @@ export default function HomePage() {
               </div>
               <p className="text-gray-600 text-sm mb-3">{subject.description}</p>
 
-              {/* 進度條 */}
               {s && (
                 <div className="w-full bg-gray-100 rounded-full h-2 mb-3">
                   <div

@@ -7,6 +7,7 @@ import { STEP_KEYS, STEP_LABELS } from "@/lib/types";
 import { saveTaskAttempt, getTaskProgress, canRetry } from "@/lib/progress";
 import { evaluateStep } from "@/lib/services/evaluation-service";
 import { calculateTaskScore } from "@/lib/services/validation-service";
+import { loadModule } from "@/lib/course-loader";
 import StepRenderer from "@/components/StepRenderer";
 
 export default function TaskPage() {
@@ -23,9 +24,7 @@ export default function TaskPage() {
   const [stepRetries, setStepRetries] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    fetch(`/api/modules/${subjectId}/${moduleId}`)
-      .then((r) => r.json())
-      .then(setMod);
+    loadModule(subjectId, moduleId).then(setMod);
   }, [subjectId, moduleId]);
 
   if (!mod) return <p className="text-gray-400">載入中...</p>;

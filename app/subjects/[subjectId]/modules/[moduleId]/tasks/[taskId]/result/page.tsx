@@ -12,6 +12,7 @@ import {
   getTaskProgress,
   canRetry,
 } from "@/lib/progress";
+import { loadModule, loadSubject } from "@/lib/course-loader";
 
 export default function ResultPage() {
   const { subjectId, moduleId, taskId } = useParams<{
@@ -32,9 +33,7 @@ export default function ResultPage() {
   const [moduleCompleted, setModuleCompleted] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/modules/${subjectId}/${moduleId}`)
-      .then((r) => r.json())
-      .then(setMod);
+    loadModule(subjectId, moduleId).then(setMod);
   }, [subjectId, moduleId]);
 
   // 處理進度更新（只執行一次）
@@ -57,16 +56,15 @@ export default function ResultPage() {
 
         // 解鎖下一模組
         if (mod.transition.on_pass.action === "unlock_next") {
-          fetch(`/api/subjects/${subjectId}`)
-            .then((r) => r.json())
-            .then((data) => {
-              const modules: string[] = data.subject.modules;
-              const currentIndex = modules.indexOf(moduleId);
-              if (currentIndex >= 0 && currentIndex < modules.length - 1) {
-                const nextModuleId = modules[currentIndex + 1];
-                setModuleStatus(subjectId, nextModuleId, "available");
-              }
-            });
+          loadSubject(subjectId).then((data) => {
+            if (!data) return;
+            const modules: string[] = data.subject.modules;
+            const currentIndex = modules.indexOf(moduleId);
+            if (currentIndex >= 0 && currentIndex < modules.length - 1) {
+              const nextModuleId = modules[currentIndex + 1];
+              setModuleStatus(subjectId, nextModuleId, "available");
+            }
+          });
         }
       }
     } else {

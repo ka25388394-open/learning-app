@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { Module } from "@/lib/types";
 import { setModuleStatus } from "@/lib/progress";
+import { loadModule } from "@/lib/course-loader";
 
 const INTRO_STEPS = ["hook", "context", "bridge", "ready"] as const;
 type IntroStep = (typeof INTRO_STEPS)[number];
@@ -19,9 +20,7 @@ export default function ModuleDetailPage() {
   const [showGoals, setShowGoals] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/modules/${subjectId}/${moduleId}`)
-      .then((r) => r.json())
-      .then(setMod);
+    loadModule(subjectId, moduleId).then(setMod);
   }, [subjectId, moduleId]);
 
   if (!mod) return <p className="text-gray-400">載入中...</p>;

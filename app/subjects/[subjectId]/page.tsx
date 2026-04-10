@@ -9,6 +9,7 @@ import {
   initSubjectProgress,
   getAllProgress,
 } from "@/lib/progress";
+import { getStoredCourse } from "@/lib/courses-store";
 
 export default function SubjectPage() {
   const { subjectId } = useParams<{ subjectId: string }>();
@@ -17,13 +18,26 @@ export default function SubjectPage() {
   const [progressMap, setProgressMap] = useState<Record<string, ModuleProgress>>({});
 
   useEffect(() => {
+    // 優先檢查使用者建立的課程
+    const stored = getStoredCourse(subjectId);
+    if (stored) {
+      setSubject(stored.subject);
+      setModules(stored.modules);
+      initSubjectProgress(subjectId, stored.subject.modules);
+      const map: Record<string, ModuleProgress> = {};
+      stored.subject.modules.forEach((id) => {
+        map[id] = getModuleProgress(subjectId, id);
+      });
+      setProgressMap(map);
+      return;
+    }
+    // 否則打 API（內建課程）
     fetch(`/api/subjects/${subjectId}`)
       .then((r) => r.json())
       .then((data: { subject: Subject; modules: Module[] }) => {
         setSubject(data.subject);
         setModules(data.modules);
         initSubjectProgress(subjectId, data.subject.modules);
-        // reload progress after init
         const map: Record<string, ModuleProgress> = {};
         data.subject.modules.forEach((id) => {
           map[id] = getModuleProgress(subjectId, id);

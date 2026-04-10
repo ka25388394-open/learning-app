@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { Module, Subject } from "@/lib/types";
+import { loadModule, loadSubject } from "@/lib/course-loader";
 
 const TRANSITION_STEPS = ["review", "challenge", "bridge", "next_preview"] as const;
 type TransitionStep = (typeof TRANSITION_STEPS)[number];
@@ -27,25 +28,18 @@ export default function TransitionPage() {
   const [step, setStep] = useState<TransitionStep>("review");
 
   useEffect(() => {
-    // 載入當前模組
-    fetch(`/api/modules/${subjectId}/${moduleId}`)
-      .then((r) => r.json())
-      .then(setMod);
+    loadModule(subjectId, moduleId).then(setMod);
 
-    // 載入 subject 找下一模組
-    fetch(`/api/subjects/${subjectId}`)
-      .then((r) => r.json())
-      .then((data: { subject: Subject; modules: Module[] }) => {
-        setSubject(data.subject);
-        const modules = data.subject.modules;
-        const currentIndex = modules.indexOf(moduleId);
-        if (currentIndex >= 0 && currentIndex < modules.length - 1) {
-          const nextId = modules[currentIndex + 1];
-          fetch(`/api/modules/${subjectId}/${nextId}`)
-            .then((r) => r.json())
-            .then(setNextMod);
-        }
-      });
+    loadSubject(subjectId).then((data) => {
+      if (!data) return;
+      setSubject(data.subject);
+      const modules = data.subject.modules;
+      const currentIndex = modules.indexOf(moduleId);
+      if (currentIndex >= 0 && currentIndex < modules.length - 1) {
+        const nextId = modules[currentIndex + 1];
+        loadModule(subjectId, nextId).then(setNextMod);
+      }
+    });
   }, [subjectId, moduleId]);
 
   if (!mod) return <p className="text-gray-400">載入中...</p>;
