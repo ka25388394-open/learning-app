@@ -10,7 +10,7 @@ if (!API_KEY && process.env.NODE_ENV === "production") {
 }
 
 // 預設使用便宜且快速的模型
-const DEFAULT_MODEL = "gemini-1.5-flash";
+const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 
 export function getAiClient() {
   if (!API_KEY) {
