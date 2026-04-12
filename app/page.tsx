@@ -5,10 +5,13 @@ import { useEffect, useState } from "react";
 import type { Subject } from "@/lib/types";
 import { getSubjectStats, initSubjectProgress } from "@/lib/progress";
 import { getStoredSubjects } from "@/lib/courses-store";
+import { getActiveActions } from "@/lib/action-store";
+import type { ActionSpace } from "@/lib/types";
 
 export default function HomePage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [stats, setStats] = useState<Record<string, { completed: number; total: number }>>({});
+  const [actions, setActions] = useState<ActionSpace[]>([]);
 
   useEffect(() => {
     // 1. 載入內建課程
@@ -34,6 +37,7 @@ export default function HomePage() {
           newStats[s.subject_id] = getSubjectStats(s.subject_id, s.modules);
         });
         setStats(newStats);
+        setActions(getActiveActions());
       });
   }, []);
 
@@ -51,6 +55,57 @@ export default function HomePage() {
           + 建立課程
         </Link>
       </div>
+
+      {/* 進行中的行動 */}
+      {actions.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">進行中的行動</h2>
+          <div className="space-y-2">
+            {actions.map((action) => {
+              const statusLabel: Record<string, string> = {
+                planning: "規劃中",
+                in_progress: "進行中",
+                stuck: "需要回顧",
+              };
+              const statusColor: Record<string, string> = {
+                planning: "bg-gray-100 text-gray-600",
+                in_progress: "bg-green-100 text-green-700",
+                stuck: "bg-amber-100 text-amber-700",
+              };
+              const daysSince = Math.floor(
+                (Date.now() - new Date(action.updated_at).getTime()) / 86400000
+              );
+              return (
+                <Link
+                  key={action.id}
+                  href={`/actions/${action.id}`}
+                  className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-green-400 hover:shadow-sm transition"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium text-gray-800">
+                      {action.commitment.what}
+                    </p>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded ${
+                        statusColor[action.status] || ""
+                      }`}
+                    >
+                      {statusLabel[action.status] || action.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {action.module_title} ・{" "}
+                    {daysSince === 0
+                      ? "今天更新"
+                      : `${daysSince} 天前更新`}
+                    ・{action.entries.length} 筆記錄
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         {subjects.map((subject) => {

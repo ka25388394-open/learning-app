@@ -140,33 +140,33 @@ export default function ResultPage() {
       )}
 
       <div className="flex flex-col items-center gap-3">
-        {/* 通過 → 還有下一任務 */}
+        {/* 通過 → 先去承諾行動 */}
+        {passed && (
+          <Link
+            href={`/subjects/${subjectId}/modules/${moduleId}/tasks/${taskId}/commitment`}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition"
+          >
+            把學到的變成行動
+          </Link>
+        )}
+
+        {/* 通過 → 還有下一任務（次要選項） */}
         {passed && hasNextTask && nextTask && (
           <Link
             href={`/subjects/${subjectId}/modules/${moduleId}/tasks/${nextTask.task_id}`}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition"
+            className="text-sm text-blue-500 hover:underline"
           >
-            前往下一個任務：{nextTask.title}
+            或直接前往下一任務：{nextTask.title}
           </Link>
         )}
 
-        {/* 通過 + 模組完成 → 進入過渡頁 */}
+        {/* 通過 + 模組完成 → 進入過渡頁（次要選項） */}
         {passed && moduleCompleted && (
           <Link
             href={`/subjects/${subjectId}/modules/${moduleId}/transition`}
-            className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition"
+            className="text-sm text-blue-500 hover:underline"
           >
-            繼續
-          </Link>
-        )}
-
-        {/* 通過但模組尚未完成（無下一任務的邊界情況） */}
-        {passed && !hasNextTask && !moduleCompleted && (
-          <Link
-            href={`/subjects/${subjectId}`}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition"
-          >
-            回到模組列表
+            或繼續模組過渡
           </Link>
         )}
 
