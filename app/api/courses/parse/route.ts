@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseCourseContent } from "@/lib/services/ai-service";
+import { normalizeCourse } from "@/lib/services/course-normalizer";
 
 export const maxDuration = 60; // Vercel hobby plan 上限
 
@@ -38,7 +39,9 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(parsed);
+    // 用 normalizer 強制修正格式錯誤
+    const normalized = normalizeCourse(parsed);
+    return NextResponse.json(normalized);
   } catch (err) {
     const message = err instanceof Error ? err.message : "未知錯誤";
     return NextResponse.json({ error: message }, { status: 500 });

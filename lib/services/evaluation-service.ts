@@ -61,17 +61,34 @@ export const ruleEvaluator: StepEvaluator = {
   },
 };
 
-// ---- AI 評估器（預留）----
+// ---- AI 評估器（透過 API route 呼叫，避免 key 洩漏到前端）----
 
 export const aiEvaluator: StepEvaluator = {
   async evaluate(step: TaskStep, response: string): Promise<StepResult> {
-    // TODO: 接 AI API
-    // 1. 將 step.ai_evaluation_prompt + step.ai_rubric + response 送到 AI
-    // 2. AI 回傳 passed + feedback
-    // 3. 記錄 AI confidence
+    try {
+      const res = await fetch("/api/courses/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: step.prompt || "",
+          answer: response,
+          min_length: step.min_length,
+          rubric: step.ai_rubric,
+        }),
+      });
 
-    // 目前 fallback 到規則評估
-    return ruleEvaluator.evaluate(step, response);
+      if (!res.ok) throw new Error("AI 評估失敗");
+      const data = await res.json();
+
+      return {
+        response,
+        passed: !!data.passed,
+        feedback: data.feedback || "已評估完成",
+      };
+    } catch {
+      // AI 失敗 → fallback 到規則評估
+      return ruleEvaluator.evaluate(step, response);
+    }
   },
 };
 
