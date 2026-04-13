@@ -18,9 +18,14 @@ export default function RootLayout({
           <a href="/" className="text-xl font-bold text-blue-600">
             啟程
           </a>
-          <a href="/settings/plan" className="text-sm text-gray-500 hover:text-gray-700">
-            方案
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="/settings/plan" className="text-sm text-gray-500 hover:text-gray-700">
+              方案
+            </a>
+            <a href="/admin/dev" className="text-xs text-gray-400 hover:text-gray-600 font-mono">
+              DEV
+            </a>
+          </div>
         </header>
         <main className="max-w-3xl mx-auto px-4 py-8">{children}</main>
       </body>

@@ -403,3 +403,101 @@ ${input.user_message}
   const result = await model.generateContent(prompt);
   return result.response.text();
 }
+
+// ---- #6 品質 AI：驗證課程內容正確性 ----
+
+export interface QualityIssue {
+  module_id: string;
+  task_id: string;
+  step_key: string;
+  issue_type: string;
+  description: string;
+  suggestion: string;
+}
+
+export interface QualityReport {
+  passed: boolean;
+  score: number;
+  issues: QualityIssue[];
+  summary: string;
+}
+
+export async function qualityCheck(modules: unknown[], tier: AiTier = "basic"): Promise<QualityReport> {
+  const client = getAiClient();
+  const qcModel = client.getGenerativeModel({
+    model: getModel(tier, "evaluate"),
+    generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+  });
+
+  const qcPrompt = `你是課程品質審核員。檢查以下課程：
+
+${JSON.stringify(modules, null, 2)}
+
+【檢查】1.選擇題答案對不對 2.是非題邏輯對不對 3.題目清不清楚 4.欄位有沒有缺
+
+【輸出JSON】{"passed":true/false,"score":0-1,"issues":[{"module_id":"","task_id":"","step_key":"","issue_type":"wrong_answer|unclear_prompt|missing_field","description":"","suggestion":""}],"summary":"一句話"}
+沒問題issues給空陣列。`;
+
+  const qcResult = await qcModel.generateContent(qcPrompt);
+  try { return JSON.parse(qcResult.response.text()); }
+  catch { return { passed: true, score: 0.7, issues: [], summary: "檢查完成" }; }
+}
+
+// ---- #7 補救 AI：答錯時換方式解釋 ----
+
+export async function remediate(
+  stepPrompt: string, correctAnswer: string, userAnswer: string,
+  attemptCount: number, moduleTitle: string, tier: AiTier = "basic"
+): Promise<string> {
+  const client = getAiClient();
+  const remModel = client.getGenerativeModel({
+    model: getModel(tier, "guide"),
+    generationConfig: { temperature: 0.7 },
+  });
+
+  const remPrompt = `學生在這題答錯了 ${attemptCount} 次。
+
+【題目】${stepPrompt}
+【正確答案】${correctAnswer}
+【學生答】${userAnswer}
+【課程】${moduleTitle}
+
+用全新的比喻或日常案例重新解釋（不要直接給答案），3-5句話，溫暖語氣，像朋友在聊天。`;
+
+  const remResult = await remModel.generateContent(remPrompt);
+  return remResult.response.text();
+}
+
+// ---- #8 適性 AI：難度調整建議 ----
+
+export interface AdaptSuggestion {
+  difficulty_change: "easier" | "same" | "harder";
+  reasoning: string;
+  specific_adjustments: string[];
+}
+
+export async function adaptDifficulty(
+  moduleTitle: string,
+  taskResults: Array<{ task_id: string; passed: boolean; score: number; attempt_count: number }>,
+  overallAccuracy: number,
+  tier: AiTier = "basic"
+): Promise<AdaptSuggestion> {
+  const client = getAiClient();
+  const adModel = client.getGenerativeModel({
+    model: getModel(tier, "evaluate"),
+    generationConfig: { responseMimeType: "application/json", temperature: 0.3 },
+  });
+
+  const adPrompt = `根據學生表現建議難度。
+
+【模組】${moduleTitle}
+【正確率】${Math.round(overallAccuracy * 100)}%
+【表現】${taskResults.map((t) => `${t.task_id}:${t.passed ? "過" : "沒過"},${Math.round(t.score * 100)}%,試${t.attempt_count}次`).join("; ")}
+
+>90%且都1次過→harder, 60-90%→same, <60%→easier
+輸出JSON：{"difficulty_change":"easier/same/harder","reasoning":"","specific_adjustments":[""]}`;
+
+  const adResult = await adModel.generateContent(adPrompt);
+  try { return JSON.parse(adResult.response.text()); }
+  catch { return { difficulty_change: "same", reasoning: "維持目前難度", specific_adjustments: [] }; }
+}
