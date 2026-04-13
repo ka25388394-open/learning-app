@@ -13,11 +13,11 @@ interface Props {
 export default function ReadingStep({ label, step, completed, onConfirm }: Props) {
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-500 mb-2">
-        步驟：{label}
+      <h3 className="text-sm font-semibold text-gray-400 mb-4">
+        {label}
       </h3>
       <div
-        className="prose prose-sm max-w-none mb-4 bg-white p-4 rounded border border-gray-200"
+        className="max-w-none mb-6 bg-white rounded-xl border border-gray-100 px-6 py-8 text-gray-700 text-[15px] leading-[1.9]"
         dangerouslySetInnerHTML={{ __html: markdownToHtml(step.content || "") }}
       />
       {completed ? (
@@ -25,9 +25,9 @@ export default function ReadingStep({ label, step, completed, onConfirm }: Props
       ) : (
         <button
           onClick={onConfirm}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+          className="bg-gray-900 text-white px-5 py-2.5 rounded-lg hover:bg-gray-800 text-sm"
         >
-          我已閱讀完畢
+          繼續
         </button>
       )}
     </div>

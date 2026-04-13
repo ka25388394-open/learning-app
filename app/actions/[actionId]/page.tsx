@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import type { ActionSpace } from "@/lib/types";
+import type { ActionSpace, Module } from "@/lib/types";
 import { getActionSpace, addEntry, updateStatus } from "@/lib/action-store";
+import { loadModule } from "@/lib/course-loader";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -20,6 +21,7 @@ function timeAgo(dateStr: string): string {
 export default function ActionSpacePage() {
   const { actionId } = useParams<{ actionId: string }>();
   const [space, setSpace] = useState<ActionSpace | null>(null);
+  const [mod, setMod] = useState<Module | null>(null);
   const [note, setNote] = useState("");
   const [showStuck, setShowStuck] = useState(false);
 
@@ -30,6 +32,12 @@ export default function ActionSpacePage() {
   useEffect(() => {
     reload();
   }, [actionId]);
+
+  // 載入模組資料，找出下一個任務
+  useEffect(() => {
+    if (!space) return;
+    loadModule(space.subject_id, space.module_id).then(setMod);
+  }, [space?.subject_id, space?.module_id]);
 
   if (!space) {
     return (
@@ -88,8 +96,35 @@ export default function ActionSpacePage() {
         &larr; 回到首頁
       </Link>
 
+      {/* 繼續學習入口 */}
+      {mod && (() => {
+        const currentTaskIndex = mod.tasks.findIndex((t) => t.task_id === space.task_id);
+        const hasNextTask = currentTaskIndex >= 0 && currentTaskIndex < mod.tasks.length - 1;
+        const nextTask = hasNextTask ? mod.tasks[currentTaskIndex + 1] : null;
+
+        return (
+          <div className="mt-4 mb-4 bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-center justify-between">
+            <p className="text-sm text-blue-700">
+              {hasNextTask
+                ? `還有下一個任務：${nextTask!.title}`
+                : "這個模組的任務都完成了"}
+            </p>
+            <Link
+              href={
+                hasNextTask
+                  ? `/subjects/${space.subject_id}/modules/${space.module_id}/tasks/${nextTask!.task_id}`
+                  : `/subjects/${space.subject_id}/modules/${space.module_id}/transition`
+              }
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm whitespace-nowrap"
+            >
+              繼續學習
+            </Link>
+          </div>
+        );
+      })()}
+
       {/* 標題 */}
-      <div className="mt-4 mb-6">
+      <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
           <h1 className="text-xl font-bold">行動空間</h1>
           <span className={`text-xs px-2 py-0.5 rounded ${statusColor[space.status]}`}>

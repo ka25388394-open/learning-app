@@ -6,7 +6,7 @@ export const maxDuration = 30;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { question, answer, min_length, rubric } = body;
+    const { question, answer, min_length, rubric, tier } = body;
 
     if (!question || !answer) {
       return NextResponse.json(
@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       answer,
       min_length,
       rubric,
+      tier: tier || "basic",
     });
 
     return NextResponse.json(result);

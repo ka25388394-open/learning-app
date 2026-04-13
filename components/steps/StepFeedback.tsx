@@ -2,27 +2,22 @@
 
 import { useState } from "react";
 
-export type HelpReason = "question_unclear" | "content_unclear" | "need_guidance" | "other";
+export type HelpReason = "content_unclear" | "need_guidance" | "other";
 
 const HELP_OPTIONS: { key: HelpReason; label: string; response: string }[] = [
   {
-    key: "question_unclear",
-    label: "題目看不懂",
-    response: "沒關係，讓我換個方式問。仔細看看題目裡的關鍵字，想想它在問「是」還是「不是」、「哪一個」還是「為什麼」。搞清楚問題在問什麼，答案通常就在你剛讀過的內容裡。",
-  },
-  {
     key: "content_unclear",
-    label: "前面的內容不太懂",
-    response: "可以回到上一步重新讀一次。這次讀的時候，特別注意粗體字和例子的部分——那些通常就是最關鍵的概念。不用急，理解比速度重要。",
+    label: "我不太確定",
+    response: "沒關係。回去看看前面的內容，特別注意粗體字的部分——那些就是關鍵。不用急，理解比速度重要。",
   },
   {
     key: "need_guidance",
-    label: "我需要一點提示",
+    label: "給我一點提示",
     response: "",  // 會動態帶入 step.hint
   },
   {
     key: "other",
-    label: "我想直接看答案",
+    label: "讓我看答案",
     response: "",  // 會動態帶入 step.explanation
   },
 ];
@@ -71,8 +66,8 @@ export default function StepFeedback({
         {/* 還沒選擇幫助方向 */}
         {!showHelp && canRetry && (
           <div>
-            <p className="text-sm text-gray-600 mb-2">你想怎麼處理？</p>
-            <div className="grid grid-cols-2 gap-2">
+            <p className="text-sm text-gray-500 mb-3">沒關係，你可以：</p>
+            <div className="space-y-2">
               {HELP_OPTIONS.map((opt) => (
                 <button
                   key={opt.key}
@@ -80,7 +75,7 @@ export default function StepFeedback({
                     setShowHelp(true);
                     setSelectedHelp(opt.key);
                   }}
-                  className="text-left p-3 rounded border border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 text-sm transition"
+                  className="block w-full text-left px-4 py-3 rounded-lg border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 text-sm text-gray-700 transition"
                 >
                   {opt.label}
                 </button>
@@ -99,11 +94,8 @@ export default function StepFeedback({
               {selectedHelp === "other" && (
                 <div>
                   <p className="mb-2">{explanation || "答案已顯示在上方的提示中。"}</p>
-                  <p className="text-xs text-blue-600">建議你理解答案之後，用自己的話想一次為什麼是這個答案。</p>
+                  <p className="text-xs text-blue-600">理解之後，用自己的話想一次為什麼是這個答案。</p>
                 </div>
-              )}
-              {selectedHelp === "question_unclear" && (
-                <p>{HELP_OPTIONS.find((o) => o.key === "question_unclear")!.response}</p>
               )}
               {selectedHelp === "content_unclear" && (
                 <p>{HELP_OPTIONS.find((o) => o.key === "content_unclear")!.response}</p>

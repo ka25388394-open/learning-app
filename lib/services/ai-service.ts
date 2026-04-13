@@ -9,8 +9,21 @@ if (!API_KEY && process.env.NODE_ENV === "production") {
   console.warn("[ai-service] GEMINI_API_KEY 未設定");
 }
 
-// 預設使用便宜且快速的模型
-const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+// 分級模型
+const MODEL_LITE = "gemini-2.5-flash-lite";  // 免費/基礎版
+const MODEL_FULL = "gemini-2.5-flash";        // 進階版
+
+export type AiTier = "free" | "basic" | "premium";
+
+function getModel(tier: AiTier, task: "parse" | "evaluate" | "guide"): string {
+  if (tier === "premium") return MODEL_FULL;
+  if (tier === "basic") {
+    // 基礎版：拆解用好的，評估用輕量
+    return task === "parse" ? MODEL_FULL : MODEL_LITE;
+  }
+  // 免費版：全部用輕量（但大部分功能不會呼叫 AI）
+  return MODEL_LITE;
+}
 
 export function getAiClient() {
   if (!API_KEY) {
@@ -24,12 +37,14 @@ export function getAiClient() {
 export interface ParseCourseInput {
   raw_content: string;
   desired_module_count?: number;
+  tier?: AiTier;
 }
 
 export async function parseCourseContent(input: ParseCourseInput): Promise<string> {
+  const tier = input.tier || "basic";
   const client = getAiClient();
   const model = client.getGenerativeModel({
-    model: DEFAULT_MODEL,
+    model: getModel(tier, "parse"),
     generationConfig: {
       responseMimeType: "application/json",
     },
@@ -52,6 +67,12 @@ export async function parseCourseContent(input: ParseCourseInput): Promise<strin
    - feedback: type 必須是 "self_reflection"
 5. 文字風格要對話感、有共鳴，避免生硬說教
 6. **絕對禁止**：在 type 是 short_answer 的步驟裡寫「以下哪個選項...」這種選擇題的題目。短答題就要問開放式問題。
+7. **閱讀內容排版規則**（type=reading 的 content 欄位）：
+   - 每 2-3 句話就空一行（用 \\n\\n），給眼睛呼吸空間
+   - 關鍵概念用 **粗體** 標記
+   - 案例或故事用 > 引用格式（Markdown blockquote）
+   - 不要一大段擠在一起
+   - 每段控制在 30-50 字以內
 
 【原始內容】
 ${input.raw_content}
@@ -158,7 +179,8 @@ export interface EvaluateAnswerInput {
   question: string;
   answer: string;
   min_length?: number;
-  rubric?: string; // 可選的評分標準
+  rubric?: string;
+  tier?: AiTier;
 }
 
 export interface EvaluationResult {
@@ -170,12 +192,13 @@ export interface EvaluationResult {
 }
 
 export async function evaluateTextAnswer(input: EvaluateAnswerInput): Promise<EvaluationResult> {
+  const tier = input.tier || "basic";
   const client = getAiClient();
   const model = client.getGenerativeModel({
-    model: DEFAULT_MODEL,
+    model: getModel(tier, "evaluate"),
     generationConfig: {
       responseMimeType: "application/json",
-      temperature: 0.3, // 評估要穩定
+      temperature: 0.3,
     },
   });
 

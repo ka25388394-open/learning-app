@@ -26,10 +26,10 @@ export default function TextStep({ label, step, onSubmit, result, onRetry, retry
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-500 mb-2">
-        步驟：{label}
+      <h3 className="text-sm font-semibold text-gray-400 mb-4">
+        {label}
       </h3>
-      <p className="font-medium mb-3">{step.prompt}</p>
+      <p className="font-medium text-gray-800 text-[15px] leading-relaxed mb-5">{step.prompt}</p>
       <textarea
         value={value}
         onChange={(e) => setValue(e.target.value)}

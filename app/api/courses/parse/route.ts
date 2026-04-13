@@ -7,7 +7,7 @@ export const maxDuration = 60; // Vercel hobby plan 上限
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { raw_content, desired_module_count } = body;
+    const { raw_content, desired_module_count, tier } = body;
 
     if (!raw_content || typeof raw_content !== "string") {
       return NextResponse.json(
@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     const jsonText = await parseCourseContent({
       raw_content,
       desired_module_count,
+      tier: tier || "basic",
     });
 
     // 嘗試解析 AI 回傳的 JSON
