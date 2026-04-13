@@ -253,3 +253,153 @@ ${input.rubric ? `【評分標準】\n${input.rubric}\n` : ""}
     };
   }
 }
+
+// ---- #1 拆分 AI：大文件切模組 ----
+
+export interface SplitContentInput {
+  raw_content: string;
+  tier?: AiTier;
+}
+
+export interface SplitResult {
+  title: string;
+  description: string;
+  modules: {
+    title: string;
+    summary: string;
+    key_points: string[];
+    order: number;
+  }[];
+}
+
+export async function splitContent(input: SplitContentInput): Promise<SplitResult> {
+  const tier = input.tier || "basic";
+  const client = getAiClient();
+  const model = client.getGenerativeModel({
+    model: getModel(tier, "parse"),
+    generationConfig: {
+      responseMimeType: "application/json",
+    },
+  });
+
+  const prompt = `你是一位課程規劃專家。請把下面的內容拆分成清楚的學習模組。
+
+【你的任務】
+1. 給整份內容一個主題名稱和描述
+2. 根據內容的自然段落和概念，拆分成 2-5 個模組
+3. 每個模組聚焦一個核心概念
+4. 模組之間要有邏輯順序（先學什麼、後學什麼）
+5. 只做「拆分」，不需要設計題目
+
+【原始內容】
+${input.raw_content}
+
+【輸出 JSON 格式】
+{
+  "title": "整體主題名稱",
+  "description": "1-2 句描述",
+  "modules": [
+    {
+      "title": "模組名稱",
+      "summary": "這個模組要教什麼（2-3 句話，用對話語氣）",
+      "key_points": ["核心重點 1", "核心重點 2", "核心重點 3"],
+      "order": 1
+    }
+  ]
+}
+
+請直接輸出 JSON。`;
+
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  return JSON.parse(text);
+}
+
+// ---- #3 串接 AI：學習路徑建議 ----
+
+export interface SuggestNextInput {
+  completed_modules: string[];
+  available_modules: string[];
+  subject_title: string;
+  tier?: AiTier;
+}
+
+export async function suggestNextStep(input: SuggestNextInput): Promise<string> {
+  const tier = input.tier || "basic";
+  const client = getAiClient();
+  const model = client.getGenerativeModel({
+    model: getModel(tier, "guide"),
+    generationConfig: { temperature: 0.7 },
+  });
+
+  const prompt = `你是一位溫暖的學習引導者。
+
+學生剛完成了「${input.subject_title}」主題的以下模組：
+${input.completed_modules.map((m) => `- ${m}`).join("\n")}
+
+${input.available_modules.length > 0
+    ? `還有這些模組可以學：\n${input.available_modules.map((m) => `- ${m}`).join("\n")}`
+    : "這個主題的所有模組都完成了。"
+  }
+
+請用 3-4 句話，溫暖地：
+1. 肯定他完成的部分
+2. 建議下一步可以做什麼（如果還有模組就推薦，沒有就建議實際應用方向）
+3. 語氣像朋友在聊天，不要像系統通知
+
+直接輸出文字，不要 JSON。`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
+
+// ---- #4 陪伴 AI：行動空間對話 ----
+
+export interface CompanionInput {
+  commitment: { what: string; when: string; measure: string };
+  recent_entries: string[];
+  user_message: string;
+  status: string;
+  module_title: string;
+  tier?: AiTier;
+}
+
+export async function companionChat(input: CompanionInput): Promise<string> {
+  const tier = input.tier || "basic";
+  const client = getAiClient();
+  const model = client.getGenerativeModel({
+    model: getModel(tier, "guide"),
+    generationConfig: { temperature: 0.7 },
+  });
+
+  const prompt = `你是一位溫暖的學習夥伴（不是老師、不是教練）。你的角色是陪伴，不是指導。
+
+【學生的承諾】
+- 想做什麼：${input.commitment.what}
+- 什麼時候：${input.commitment.when}
+- 怎麼算做到：${input.commitment.measure}
+
+【目前狀態】${input.status}
+【相關課程】${input.module_title}
+
+${input.recent_entries.length > 0
+    ? `【最近的記錄】\n${input.recent_entries.slice(-3).map((e) => `- ${e}`).join("\n")}`
+    : "（還沒有任何記錄）"
+  }
+
+【學生現在說】
+${input.user_message}
+
+【回應規則】
+1. 用 2-3 句話回應，像朋友聊天
+2. 不要說「你應該」「你必須」「建議你」
+3. 如果學生卡住了，問他「是哪個部分讓你不確定？」而不是直接給建議
+4. 可以提供思考方向，例如「你可以想想看...」「有些人會從...開始」
+5. 如果學生需要回顧課程，溫和地提一下「之前學的 ${input.module_title} 裡面有聊到這個」
+6. 不要批判、不要評分、不要優化建議
+
+直接輸出回應文字。`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}

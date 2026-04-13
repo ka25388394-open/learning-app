@@ -24,6 +24,8 @@ export default function ActionSpacePage() {
   const [mod, setMod] = useState<Module | null>(null);
   const [note, setNote] = useState("");
   const [showStuck, setShowStuck] = useState(false);
+  const [aiReply, setAiReply] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   function reload() {
     setSpace(getActionSpace(actionId));
@@ -210,6 +212,20 @@ export default function ActionSpacePage() {
         </div>
       )}
 
+      {/* AI 回覆 */}
+      {aiReply && (
+        <div className="bg-green-50 border border-green-100 rounded-lg p-4 mb-4">
+          <p className="text-xs text-green-500 mb-2">學習夥伴</p>
+          <p className="text-sm text-green-800 leading-relaxed">{aiReply}</p>
+          <button
+            onClick={() => setAiReply(null)}
+            className="text-xs text-green-400 mt-2 hover:text-green-600"
+          >
+            收起
+          </button>
+        </div>
+      )}
+
       {/* 輸入區 */}
       {space.status !== "done" && (
         <div className="border-t border-gray-100 pt-6">
@@ -220,19 +236,50 @@ export default function ActionSpacePage() {
             className="w-full border border-gray-200 rounded-lg p-4 text-sm min-h-[80px] focus:border-green-400 focus:outline-none"
           />
           <div className="flex items-center justify-between mt-3">
-            <button
-              onClick={handleStuck}
-              className="text-sm text-amber-500 hover:text-amber-700"
-            >
-              我卡住了
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleStuck}
+                className="text-sm text-amber-500 hover:text-amber-700"
+              >
+                我卡住了
+              </button>
+              {note.trim() && (
+                <button
+                  onClick={async () => {
+                    setAiLoading(true);
+                    try {
+                      const res = await fetch("/api/actions/companion", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          commitment: space.commitment,
+                          recent_entries: space.entries.slice(-3).map((e) => e.content),
+                          user_message: note,
+                          status: space.status,
+                          module_title: space.module_title,
+                        }),
+                      });
+                      const data = await res.json();
+                      setAiReply(data.reply);
+                    } catch {
+                      setAiReply("暫時沒辦法回應，但你可以繼續寫下想法。");
+                    }
+                    setAiLoading(false);
+                  }}
+                  disabled={aiLoading}
+                  className="text-sm text-green-500 hover:text-green-700 disabled:opacity-40"
+                >
+                  {aiLoading ? "思考中..." : "聊聊看"}
+                </button>
+              )}
+            </div>
             <div className="flex gap-2">
               {note.trim() && (
                 <button
                   onClick={handleMilestone}
                   className="text-sm text-blue-500 hover:text-blue-700"
                 >
-                  標記為里程碑
+                  里程碑
                 </button>
               )}
               <button

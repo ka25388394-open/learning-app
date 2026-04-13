@@ -26,6 +26,7 @@ export default function TransitionPage() {
   const [subject, setSubject] = useState<Subject | null>(null);
   const [nextMod, setNextMod] = useState<Module | null>(null);
   const [step, setStep] = useState<TransitionStep>("review");
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
 
   useEffect(() => {
     loadModule(subjectId, moduleId).then(setMod);
@@ -145,17 +146,51 @@ export default function TransitionPage() {
             </div>
           )}
 
-          {/* ── 預告下一模組 ── */}
+          {/* ── 預告下一模組 + AI 建議 ── */}
           {step === "next_preview" && (
             <div className="text-center">
               <p className="text-sm text-blue-600 font-medium mb-3">
                 {STEP_TITLES.next_preview}
               </p>
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-6 mb-8 text-left max-w-lg mx-auto">
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-6 mb-6 text-left max-w-lg mx-auto">
                 <p className="text-blue-800 leading-relaxed">
                   {tc.next_preview}
                 </p>
               </div>
+
+              {/* AI 個人化建議 */}
+              {aiSuggestion && (
+                <div className="bg-green-50 border border-green-100 rounded-lg p-5 mb-6 text-left max-w-lg mx-auto">
+                  <p className="text-xs text-green-500 mb-2">學習夥伴的話</p>
+                  <p className="text-sm text-green-800 leading-relaxed">{aiSuggestion}</p>
+                </div>
+              )}
+              {!aiSuggestion && subject && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const completedModules = [mod!.title];
+                      const availableModules = nextMod ? [nextMod.title] : [];
+                      const res = await fetch("/api/courses/suggest", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          completed_modules: completedModules,
+                          available_modules: availableModules,
+                          subject_title: subject.title,
+                        }),
+                      });
+                      const data = await res.json();
+                      setAiSuggestion(data.suggestion);
+                    } catch {
+                      setAiSuggestion("繼續保持，你做得很好！");
+                    }
+                  }}
+                  className="text-sm text-green-500 hover:text-green-700 mb-6 block mx-auto"
+                >
+                  聽聽學習夥伴怎麼說
+                </button>
+              )}
 
               {nextMod ? (
                 <Link
